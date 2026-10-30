@@ -1,0 +1,41 @@
+name: accesspolicy-test
+services:
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: accesspolicy_test
+      POSTGRES_USER: accesspolicy
+      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD:?Set a private test password}
+    ports:
+      - "127.0.0.1:5459:5432"
+    tmpfs:
+      - /var/lib/postgresql/data:rw,size=128m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U accesspolicy -d accesspolicy_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    mem_limit: 256m
+  tests:
+    build:
+      context: .
+      target: test
+    image: accesspolicy-api:test
+    environment:
+      APP_ENV: testing
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY:?Run Init.ps1 first}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: accesspolicy_test
+      DB_USERNAME: accesspolicy
+      DB_PASSWORD: ${TEST_DB_PASSWORD:?Set test password}
+      DEMO_OWNER_PASSWORD: ${DEMO_OWNER_PASSWORD:?Run Init.ps1 first}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:?Run Init.ps1 first}
+      DEMO_MEMBER_PASSWORD: ${DEMO_MEMBER_PASSWORD:?Run Init.ps1 first}
+      DEMO_SECOND_OWNER_PASSWORD: ${DEMO_SECOND_OWNER_PASSWORD:?Run Init.ps1 first}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 384m

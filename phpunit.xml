@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="vendor/autoload.php" colors="true" cacheDirectory=".phpunit.cache" failOnWarning="true" failOnRisky="true">
+  <testsuites><testsuite name="PostgreSQL API"><directory>tests/Feature</directory></testsuite></testsuites>
+  <php><env name="APP_ENV" value="testing"/><env name="APP_DEBUG" value="false"/></php>
+</phpunit>

@@ -1,0 +1,34 @@
+@base = http://127.0.0.1:8102
+@ownerPassword = REPLACE_LOCALLY_FROM_IGNORED_CREDENTIALS
+@token = REPLACE_WITH_LOGIN_TOKEN_LOCALLY
+
+### Read the machine-readable contract
+GET {{base}}/openapi.json
+
+### Login returns a token once
+POST {{base}}/api/v1/auth/login
+Content-Type: application/json
+
+{"email":"owner@accesspolicy.test","password":"{{ownerPassword}}"}
+
+### Own organization list
+GET {{base}}/api/v1/orgs
+Authorization: Bearer {{token}}
+
+### Use organization and user IDs from the actual list, not another tenant
+GET {{base}}/api/v1/orgs/1/members?limit=20
+Authorization: Bearer {{token}}
+
+### Modify the synthetic member; read its current version first
+PATCH {{base}}/api/v1/orgs/1/members/3
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"role":"viewer","expectedVersion":1}
+
+### Logout invalidates the current token
+POST {{base}}/api/v1/auth/logout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}

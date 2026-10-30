@@ -1,0 +1,59 @@
+name: Verify PostgreSQL API
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  postgres-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate private CI credentials
+        shell: pwsh
+        run: |
+          ./scripts/Init.ps1
+          $bytes = New-Object byte[] 32
+          [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+          $secret = [Convert]::ToHexString($bytes).ToLowerInvariant()
+          Write-Output "::add-mask::$secret"
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "TEST_DB_PASSWORD=$secret"
+      - name: Validate Compose definitions
+        run: |
+          docker compose -f compose.yml config --quiet
+          docker compose -f compose.test.yml config --quiet
+      - name: Build test image
+        run: docker compose -f compose.test.yml -p accesspolicy-test build tests
+      - name: Test with isolated real PostgreSQL
+        run: |
+          docker compose -f compose.test.yml -p accesspolicy-test up -d --wait postgres
+          docker compose -f compose.test.yml -p accesspolicy-test run --rm --no-deps tests
+      - name: Stop isolated test database
+        if: always()
+        run: docker compose -f compose.test.yml -p accesspolicy-test down
+      - name: Audit locked dependencies
+        run: docker compose -f compose.test.yml -p accesspolicy-test run --rm --no-deps tests composer audit --locked --no-interaction
+      - name: Build runtime and start HTTP API
+        run: |
+          docker compose -f compose.yml -p accesspolicy build api
+          docker compose -f compose.yml -p accesspolicy up -d --wait --wait-timeout 180
+      - name: Exercise actual HTTP API
+        run: node scripts/smoke.mjs
+      - name: Export tested runtime image
+        run: docker save accesspolicy-api:local | gzip > .local/accesspolicy-runtime.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: accesspolicy-runtime-image
+          path: .local/accesspolicy-runtime.tar.gz
+          retention-days: 3
+      - name: Service logs on failure
+        if: failure()
+        run: docker compose -f compose.yml -p accesspolicy logs --tail 100
+      - name: Stop HTTP stack
+        if: always()
+        run: docker compose -f compose.yml -p accesspolicy down
