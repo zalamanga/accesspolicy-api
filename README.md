@@ -4,6 +4,10 @@ AccessPolicy manages organization memberships through a PHP REST API. A role cha
 
 This repository contains a synthetic portfolio service, its PostgreSQL tests, OpenAPI contract, and runnable request examples. All four demo identities use `@accesspolicy.test` addresses. It sends no email and uses no external identity provider.
 
+![AccessPolicy OpenAPI reference](docs/screenshots/openapi-reference.png)
+
+This image renders the committed OpenAPI contract with Swagger UI. It is API documentation, not a business dashboard or a recorded response from a running server.
+
 ## Stack
 
 PHP 8.4, Laravel 12, Sanctum 4, PostgreSQL 17, Composer, Docker Compose, and PHPUnit. The Docker image provides the required PHP extensions. The PHP 8.1 installation in XAMPP is insufficient to run this application; Docker avoids changing that installation.
